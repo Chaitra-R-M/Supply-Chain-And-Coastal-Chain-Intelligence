@@ -1,0 +1,76 @@
+{
+  "data_source": "synthetic",
+  "model": "Hist Gradient Boosting",
+  "trained_at": "2026-11-27T11:08:42+00:00",
+  "best_params": {
+    "model__learning_rate": 0.05,
+    "model__max_iter": 100,
+    "model__max_leaf_nodes": 7
+  },
+  "regression": {
+    "Hist Gradient Boosting (train)": {
+      "MAE": 0.9044,
+      "MSE": 1.3513,
+      "RMSE": 1.1625,
+      "R2": 0.7665
+    },
+    "Hist Gradient Boosting (TEST)": {
+      "MAE": 1.0664,
+      "MSE": 1.9769,
+      "RMSE": 1.406,
+      "R2": 0.7245
+    },
+    "Baseline: same as today (TEST)": {
+      "MAE": 1.4777,
+      "MSE": 4.1478,
+      "RMSE": 2.0366,
+      "R2": 0.4219
+    },
+    "Baseline: 7-day average (TEST)": {
+      "MAE": 1.7649,
+      "MSE": 5.8383,
+      "RMSE": 2.4163,
+      "R2": 0.1863
+    }
+  },
+  "improvement_over_best_baseline_pct": 27.83,
+  "classification_test": {
+    "Low": {
+      "precision": 0.8135593220338984,
+      "recall": 0.9085173501577287,
+      "f1-score": 0.8584202682563339,
+      "support": 317.0
+    },
+    "Moderate": {
+      "precision": 0.3409090909090909,
+      "recall": 0.29411764705882354,
+      "f1-score": 0.3157894736842105,
+      "support": 102.0
+    },
+    "High": {
+      "precision": 0.391304347826087,
+      "recall": 0.3253012048192771,
+      "f1-score": 0.35526315789473684,
+      "support": 83.0
+    },
+    "Critical": {
+      "precision": 0.704225352112676,
+      "recall": 0.625,
+      "f1-score": 0.6622516556291391,
+      "support": 80.0
+    },
+    "accuracy": 0.6786941580756014,
+    "macro avg": {
+      "precision": 0.562499528220438,
+      "recall": 0.5382340505089573,
+      "f1-score": 0.547931138866105,
+      "support": 582.0
+    },
+    "weighted avg": {
+      "precision": 0.6554764972440762,
+      "recall": 0.6786941580756014,
+      "f1-score": 0.6645991854100372,
+      "support": 582.0
+    }
+  }
+}
