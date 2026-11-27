@@ -9,6 +9,7 @@ import {
   Compass,
   Container,
   Gauge,
+  LogOut,
   LayoutDashboard,
   Moon,
   Navigation,
@@ -42,6 +43,8 @@ export default function TopNavBar({
   alerts = [],
   onSimulateTick,
   simulating,
+  onLogout,
+  user,
 }) {
   const [alertsOpen, setAlertsOpen] = useState(false);
 
@@ -194,8 +197,20 @@ export default function TopNavBar({
           {/* Role Pill */}
           <div className="hidden items-center gap-1.5 rounded-lg border border-deep-space-blue-700 bg-deep-space-blue-800/80 px-2.5 py-1.5 text-xs font-medium text-blue-slate-100 xl:flex">
             <Navigation className="h-3.5 w-3.5 text-eggshell-400" />
-            <span>Port Authority</span>
+            <span>{user?.name || 'Port Authority'}</span>
           </div>
+
+          {/* Logout */}
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-700/40 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-300 transition hover:bg-rose-500/20"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Sign out</span>
+            </button>
+          )}
         </div>
       </div>
 

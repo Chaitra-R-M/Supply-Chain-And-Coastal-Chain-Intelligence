@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Anchor, Building2, CheckCircle2, Clock, Plus, Settings2, Unlock } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../../api/client';
 
 export default function BerthManagementView({ portId, onRefreshGlobal }) {
   const [portInfo, setPortInfo] = useState(null);

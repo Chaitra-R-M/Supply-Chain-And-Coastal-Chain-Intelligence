@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle, CloudRain, Plus, ShieldCheck, Waves, Wind } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../../api/client';
 
 const SEVERITY_STYLE = {
   Critical: 'border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-200',

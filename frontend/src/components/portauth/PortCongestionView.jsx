@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Anchor, Clock, Container, Gauge, Ship, Warehouse } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../../api/client';
 import CongestionGauge from './CongestionGauge';
 
 export default function PortCongestionView({ portId }) {

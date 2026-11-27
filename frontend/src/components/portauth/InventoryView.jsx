@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Boxes, MinusCircle, PlusCircle, Snowflake } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../../api/client';
 
 export default function InventoryView({ portId, onRefreshGlobal }) {
   const [data, setData] = useState(null);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Compass, Navigation, Waves } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../../api/client';
 
 const PORT_COORDS = {
   'JNPT Mumbai': { x: 165, y: 46 },

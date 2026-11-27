@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Container, History, Plus } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../../api/client';
 
 const STATUS_FLOW = ['Scheduled', 'Unloading', 'Loading', 'Stored', 'Dispatched'];
 

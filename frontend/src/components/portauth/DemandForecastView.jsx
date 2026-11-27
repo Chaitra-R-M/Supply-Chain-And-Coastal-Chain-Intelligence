@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, ArrowUpRight, CheckCircle2, Layers, TrendingUp } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../../api/client';
 
 export default function DemandForecastView({ portId }) {
   const [data, setData] = useState(null);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, History, Lock, Plus, RefreshCw, Search, ShieldAlert, Ship } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../../api/client';
 import VesselMap from './VesselMap';
 
 const STATUS_TABS = ['All', 'En Route', 'At Berth', 'Anchored', 'Delayed', 'Departing'];

@@ -1,16 +1,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from './api/client';
-import TopNavBar from './components/TopNavBar';
-import OverviewView from './components/OverviewView';
-import VesselTrafficView from './components/VesselTrafficView';
-import BerthManagementView from './components/BerthManagementView';
-import CargoOperationsView from './components/CargoOperationsView';
-import InventoryView from './components/InventoryView';
-import DemandForecastView from './components/DemandForecastView';
-import PortCongestionView from './components/PortCongestionView';
-import RiskWeatherView from './components/RiskWeatherView';
-import CoastalRoutesView from './components/CoastalRoutesView';
-import AnalyticsReportsView from './components/AnalyticsReportsView';
+import LoginPage from './components/LoginPage';
+import TopNavBar from './components/portauth/TopNavBar';
+import OverviewView from './components/portauth/OverviewView';
+import VesselTrafficView from './components/portauth/VesselTrafficView';
+import BerthManagementView from './components/portauth/BerthManagementView';
+import CargoOperationsView from './components/portauth/CargoOperationsView';
+import InventoryView from './components/portauth/InventoryView';
+import DemandForecastView from './components/portauth/DemandForecastView';
+import PortCongestionView from './components/portauth/PortCongestionView';
+import RiskWeatherView from './components/portauth/RiskWeatherView';
+import CoastalRoutesView from './components/portauth/CoastalRoutesView';
+import AnalyticsReportsView from './components/portauth/AnalyticsReportsView';
+import ShippingDashboard from './components/shipping/ShippingDashboard';
+import CargoDashboard from './components/cargo/CargoDashboard';
 
 export default function App() {
   const [theme, setTheme] = useState(() => {
@@ -19,6 +22,17 @@ export default function App() {
     }
     return 'light';
   });
+
+  // Auth state
+  const [session, setSession] = useState(() => {
+    try {
+      const stored = localStorage.getItem('cci_session');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [activeTab, setActiveTab] = useState('overview');
   const [ports, setPorts] = useState([]);
   const [selectedPortId, setSelectedPortId] = useState('mangalore');
@@ -26,6 +40,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
   const [error, setError] = useState('');
+
+  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   useEffect(() => {
     const root = document.documentElement;
@@ -36,6 +52,16 @@ export default function App() {
     }
     localStorage.setItem('cci_theme', theme);
   }, [theme]);
+
+  const handleLogin = (userData) => {
+    setSession(userData);
+    localStorage.setItem('cci_session', JSON.stringify(userData));
+  };
+
+  const handleLogout = () => {
+    setSession(null);
+    localStorage.removeItem('cci_session');
+  };
 
   const loadDashboard = useCallback(async (portId) => {
     setError('');
@@ -51,9 +77,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    loadDashboard(selectedPortId);
-  }, [selectedPortId, loadDashboard]);
+    // Only load port dashboard data when in Port Authority mode
+    if (session?.role === 'port' || !session) {
+      setLoading(true);
+      loadDashboard(selectedPortId);
+    }
+  }, [selectedPortId, loadDashboard, session]);
 
   const handleSimulateTick = async () => {
     setSimulating(true);
@@ -70,6 +99,35 @@ export default function App() {
   const selectedPortName =
     ports.find((p) => p.id === selectedPortId)?.name || dashboard?.port?.name || 'Mangalore Port';
 
+  // Show login page if not authenticated
+  if (!session) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
+  // Route to the correct dashboard based on role
+  if (session.role === 'shipping') {
+    return (
+      <ShippingDashboard
+        user={session}
+        onLogout={handleLogout}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
+    );
+  }
+
+  if (session.role === 'cargo') {
+    return (
+      <CargoDashboard
+        user={session}
+        onLogout={handleLogout}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
+    );
+  }
+
+  // Port Authority dashboard (existing, unchanged)
   return (
     <div className="min-h-screen bg-dusty-denim-50 text-ink-black-900 transition-colors dark:bg-ink-black-950 dark:text-ink-black-50">
       <TopNavBar
@@ -79,10 +137,12 @@ export default function App() {
         selectedPortId={selectedPortId}
         onSelectPort={setSelectedPortId}
         theme={theme}
-        onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+        onToggleTheme={toggleTheme}
         alerts={dashboard?.active_alerts || []}
         onSimulateTick={handleSimulateTick}
         simulating={simulating}
+        onLogout={handleLogout}
+        user={session}
       />
 
       <main className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">

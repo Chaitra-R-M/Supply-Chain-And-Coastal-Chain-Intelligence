@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart3, Download, FileJson, FileSpreadsheet } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../../api/client';
 
 export default function AnalyticsReportsView({ portId }) {
   const [period, setPeriod] = useState('weekly');
