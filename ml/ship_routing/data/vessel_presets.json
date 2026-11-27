@@ -1,0 +1,51 @@
+{
+  "container_ship": {
+    "vessel_type": "container_ship",
+    "service_speed_kn": 16.0,
+    "draft_m": 12.5,
+    "max_wave_height_m": 6.0,
+    "max_wind_speed_kn": 45.0,
+    "wave_thresholds_m": null,
+    "notes": "prototype values - replace with real vessel data"
+  },
+  "bulk_carrier": {
+    "vessel_type": "bulk_carrier",
+    "service_speed_kn": 13.0,
+    "draft_m": 11.5,
+    "max_wave_height_m": 5.5,
+    "max_wind_speed_kn": 40.0,
+    "wave_thresholds_m": null,
+    "notes": "prototype values - replace with real vessel data"
+  },
+  "tanker": {
+    "vessel_type": "tanker",
+    "service_speed_kn": 14.0,
+    "draft_m": 13.0,
+    "max_wave_height_m": 6.0,
+    "max_wind_speed_kn": 45.0,
+    "wave_thresholds_m": null,
+    "notes": "prototype values - replace with real vessel data"
+  },
+  "general_cargo": {
+    "vessel_type": "general_cargo",
+    "service_speed_kn": 12.0,
+    "draft_m": 8.0,
+    "max_wave_height_m": 4.5,
+    "max_wind_speed_kn": 38.0,
+    "wave_thresholds_m": null,
+    "notes": "prototype values - replace with real vessel data"
+  },
+  "small_coastal_vessel": {
+    "vessel_type": "small_coastal_vessel",
+    "service_speed_kn": 10.0,
+    "draft_m": 2.5,
+    "max_wave_height_m": 3.5,
+    "max_wind_speed_kn": 34.0,
+    "wave_thresholds_m": [
+      1.25,
+      2.0,
+      3.0
+    ],
+    "notes": "prototype values - replace with real vessel data"
+  }
+}

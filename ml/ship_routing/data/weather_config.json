@@ -1,0 +1,26 @@
+{
+  "provider": "open-meteo",
+  "marine_url": "https://marine-api.open-meteo.com/v1/marine",
+  "forecast_url": "https://api.open-meteo.com/v1/forecast",
+  "marine_hourly": [
+    "wave_height",
+    "wave_direction",
+    "wave_period",
+    "swell_wave_height"
+  ],
+  "wind_hourly": [
+    "wind_speed_10m",
+    "wind_direction_10m",
+    "wind_gusts_10m"
+  ],
+  "marine_max_forecast_days": 7,
+  "wind_max_forecast_days": 15,
+  "batch_size": 50,
+  "timeout_s": 20.0,
+  "max_retries": 2,
+  "backoff_s": 2.0,
+  "min_interval_s": 0.3,
+  "cache_ttl_hours": 3.0,
+  "cache_file": "/tmp/nbtest/coastal_platform/ml/ship_routing/results/cache/weather_cache.json",
+  "coord_decimals": 2
+}
