@@ -1,41 +1,26 @@
 import React, { useState } from 'react';
-import { Anchor, Package, Ship, Shield, Eye, EyeOff, LogIn } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 const ROLES = [
   {
     id: 'port',
     label: 'Port Authority',
-    icon: Anchor,
-    color: 'from-deep-space-blue-700 to-deep-space-blue-900',
-    ring: 'ring-deep-space-blue-500',
-    badge: 'bg-deep-space-blue-500/20 text-deep-space-blue-200',
-    description: 'Manage berths, vessel traffic, cargo operations & port intelligence.',
     users: [
       { email: 'admin@mangaloreport.in', password: 'port123', name: 'Cmdr. Ravi Nair' },
-      { email: 'ops@kochiseaport.in', password: 'port123', name: 'Supt. Priya Menon' },
+      { email: 'ops@kochiseaport.in',    password: 'port123', name: 'Supt. Priya Menon' },
     ],
   },
   {
     id: 'shipping',
     label: 'Shipping Company',
-    icon: Ship,
-    color: 'from-ink-black-700 to-ink-black-900',
-    ring: 'ring-ink-black-400',
-    badge: 'bg-ink-black-500/20 text-ink-black-200',
-    description: 'Manage your fleet, voyages, cargo assignments & vessel tracking.',
     users: [
       { email: 'fleet@indiashipping.in', password: 'ship123', name: 'Capt. Arjun Sharma' },
-      { email: 'ops@coastallines.in', password: 'ship123', name: 'Mgr. Deepa Krishnan' },
+      { email: 'ops@coastallines.in',    password: 'ship123', name: 'Mgr. Deepa Krishnan' },
     ],
   },
   {
     id: 'cargo',
     label: 'Cargo Owner',
-    icon: Package,
-    color: 'from-eggshell-700 to-eggshell-900',
-    ring: 'ring-eggshell-500',
-    badge: 'bg-eggshell-500/20 text-eggshell-200',
-    description: 'Register cargo, request transport, track shipments & monitor inventory.',
     users: [
       { email: 'logistics@agroindia.in', password: 'cargo123', name: 'Rajesh Gupta' },
       { email: 'supply@spicetraders.in', password: 'cargo123', name: 'Anitha Nambiar' },
@@ -44,201 +29,204 @@ const ROLES = [
 ];
 
 export default function LoginPage({ onLogin }) {
-  const [selectedRole, setSelectedRole] = useState(null);
-  const [email, setEmail] = useState('');
+  const [selectedRole, setSelectedRole] = useState('port');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw]     = useState(false);
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
 
-  const fillDemo = (user) => {
-    setEmail(user.email);
-    setPassword(user.password);
-    setError('');
-  };
+  const fillDemo = (u) => { setEmail(u.email); setPassword(u.password); setError(''); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedRole) { setError('Please select your role.'); return; }
     setError('');
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    const role = ROLES.find((r) => r.id === selectedRole);
+    await new Promise((r) => setTimeout(r, 500));
+    const role  = ROLES.find((r) => r.id === selectedRole);
     const match = role.users.find((u) => u.email === email && u.password === password);
-    if (!match) {
-      setError('Invalid credentials. Use a demo account below, or try the sample credentials.');
-      setLoading(false);
-      return;
-    }
+    if (!match) { setError('Invalid credentials. Use a demo account below.'); setLoading(false); return; }
     setLoading(false);
     onLogin({ role: selectedRole, name: match.name, email: match.email });
   };
 
   return (
-    <div className="min-h-screen bg-deep-space-blue-950 text-ink-black-50 flex flex-col">
-      {/* Header */}
-      <header className="border-b border-deep-space-blue-800 bg-deep-space-blue-900/80 px-6 py-4">
-        <div className="mx-auto flex max-w-5xl items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink-black-500/30 border border-ink-black-400/40">
-            <Ship className="h-5 w-5 text-eggshell-300" />
-          </div>
-          <div>
-            <span className="text-sm font-bold tracking-tight text-ink-black-50">
-              Coastal Chain Intelligence
-            </span>
-            <p className="text-[11px] text-blue-slate-300">Supply Chain &amp; Maritime Operations Platform</p>
-          </div>
-          <div className="ml-auto flex items-center gap-1.5 rounded-full border border-eggshell-500/30 bg-eggshell-500/10 px-3 py-1 text-[11px] font-semibold text-eggshell-200">
-            <Shield className="h-3 w-3" /> Secure Login
-          </div>
+    <div className="min-h-screen flex" style={{ background: '#f5f0e8' }}>
+
+      {/* ── Left panel: hero image ─────────────────────────────────── */}
+      <div
+        className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, #0a2a2a 0%, #0d3d3d 60%, #1a5555 100%)',
+        }}
+      >
+        {/* Ship photo — uses a freely-embeddable Unsplash image */}
+        <img
+          src="https://images.unsplash.com/photo-1605745341112-85968b19335b?w=1400&auto=format&fit=crop&q=85"
+          alt="Aerial view of container cargo ship"
+          className="absolute inset-0 h-full w-full object-cover object-center opacity-75"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />
+
+        {/* Gradient overlay at bottom for text legibility */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(to top, rgba(10,42,42,0.92) 0%, rgba(10,42,42,0.45) 50%, transparent 100%)',
+          }}
+        />
+
+        {/* Hero text */}
+        <div className="absolute bottom-10 left-10 right-10 text-white">
+          <h2 className="text-3xl font-extrabold leading-tight mb-2">
+            From Kandla to Kolkata,<br />smooth sailing.
+          </h2>
+          <p className="text-sm text-white/70">
+            7,500 km of coastline and every shipment in one calm view.
+          </p>
         </div>
-      </header>
+      </div>
 
-      {/* Main */}
-      <main className="flex flex-1 items-center justify-center px-4 py-10">
-        <div className="w-full max-w-4xl">
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-extrabold tracking-tight text-ink-black-50">
-              Welcome back
-            </h1>
-            <p className="mt-2 text-sm text-blue-slate-300">
-              Select your role and sign in to access your personalised dashboard.
-            </p>
-          </div>
+      {/* ── Right panel: sign-in form ──────────────────────────────── */}
+      <div
+        className="flex flex-1 items-center justify-center px-8 py-12"
+        style={{ background: '#f5f0e8' }}
+      >
+        <div className="w-full max-w-md">
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-8">
-            {ROLES.map((role) => {
-              const Icon = role.icon;
-              const active = selectedRole === role.id;
-              return (
-                <button
-                  key={role.id}
-                  type="button"
-                  onClick={() => { setSelectedRole(role.id); setEmail(''); setPassword(''); setError(''); }}
-                  className={`group relative overflow-hidden rounded-2xl border-2 p-5 text-left transition-all duration-200 ${
-                    active
-                      ? `border-transparent bg-gradient-to-br ${role.color} shadow-xl ring-2 ${role.ring}`
-                      : 'border-deep-space-blue-700 bg-deep-space-blue-900/60 hover:border-deep-space-blue-600 hover:bg-deep-space-blue-800/60'
-                  }`}
-                >
-                  <div
-                    className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl ${
-                      active ? 'bg-white/20' : 'bg-deep-space-blue-800'
-                    }`}
+          {/* Title */}
+          <h1 className="text-3xl font-extrabold leading-tight mb-1" style={{ color: '#1a6b6b' }}>
+            Coastal Chain Intelligence
+          </h1>
+          <p className="text-sm mb-8" style={{ color: '#777' }}>Sign in to your workspace</p>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+            {/* Role chips */}
+            <div>
+              <p className="text-sm font-medium mb-2" style={{ color: '#444' }}>I am a</p>
+              <div className="flex gap-3">
+                {ROLES.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => { setSelectedRole(r.id); setEmail(''); setPassword(''); setError(''); }}
+                    className="flex-1 rounded-2xl border-2 px-3 py-3 text-sm font-semibold text-center leading-snug transition-all"
+                    style={
+                      selectedRole === r.id
+                        ? { borderColor: '#4dbfbf', background: '#c8eeee', color: '#1a6b6b' }
+                        : { borderColor: '#ddd', background: 'white', color: '#555' }
+                    }
                   >
-                    <Icon className={`h-6 w-6 ${active ? 'text-white' : 'text-blue-slate-200'}`} />
-                  </div>
-                  <h3 className={`text-sm font-bold ${active ? 'text-white' : 'text-ink-black-100'}`}>
-                    {role.label}
-                  </h3>
-                  <p className={`mt-1 text-[12px] leading-snug ${active ? 'text-white/80' : 'text-blue-slate-300'}`}>
-                    {role.description}
-                  </p>
-                  {active && (
-                    <div className="absolute top-3 right-3">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${role.badge} bg-white/25 text-white`}>
-                        Selected
-                      </span>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Login Form */}
-          <div className="mx-auto max-w-md">
-            <form
-              onSubmit={handleSubmit}
-              className="rounded-2xl border border-deep-space-blue-700 bg-deep-space-blue-900/80 p-6 shadow-2xl backdrop-blur"
-            >
-              <h2 className="mb-5 text-sm font-bold text-ink-black-50">
-                {selectedRole ? `Sign in as ${ROLES.find((r) => r.id === selectedRole)?.label}` : 'Sign in to your account'}
-              </h2>
-
-              {error && (
-                <div className="mb-4 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
-                  {error}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <label className="block">
-                  <span className="text-xs font-semibold text-blue-slate-300">Email address</span>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="yourname@company.in"
-                    className="mt-1.5 w-full rounded-xl border border-deep-space-blue-700 bg-deep-space-blue-950 px-3 py-2 text-sm text-ink-black-50 placeholder:text-blue-slate-500 focus:border-ink-black-400 focus:outline-none focus:ring-1 focus:ring-ink-black-400"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-semibold text-blue-slate-300">Password</span>
-                  <div className="relative mt-1.5">
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      className="w-full rounded-xl border border-deep-space-blue-700 bg-deep-space-blue-950 px-3 py-2 pr-10 text-sm text-ink-black-50 placeholder:text-blue-slate-500 focus:border-ink-black-400 focus:outline-none focus:ring-1 focus:ring-ink-black-400"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPw((s) => !s)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-slate-400 hover:text-blue-slate-200"
-                      aria-label={showPw ? 'Hide password' : 'Show password'}
-                    >
-                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </label>
+                    {r.label}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-black-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-black-600 disabled:opacity-60"
-              >
-                {loading ? (
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                ) : (
-                  <LogIn className="h-4 w-4" />
-                )}
-                {loading ? 'Signing in…' : 'Sign In'}
-              </button>
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: '#444' }}>
+                Email
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="yourname@company.in"
+                className="w-full rounded-2xl border px-4 py-3 text-sm outline-none transition"
+                style={{ borderColor: '#ddd', background: 'white', color: '#333' }}
+                onFocus={(e) => (e.target.style.borderColor = '#4dbfbf')}
+                onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+              />
+            </div>
 
-              {/* Demo Accounts */}
-              {selectedRole && (
-                <div className="mt-5 border-t border-deep-space-blue-700 pt-4">
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-blue-slate-400">
-                    Demo accounts
-                  </p>
-                  <div className="space-y-1.5">
-                    {ROLES.find((r) => r.id === selectedRole)?.users.map((u) => (
-                      <button
-                        key={u.email}
-                        type="button"
-                        onClick={() => fillDemo(u)}
-                        className="flex w-full items-center justify-between rounded-lg border border-deep-space-blue-700 bg-deep-space-blue-800/60 px-3 py-2 text-left text-xs transition hover:bg-deep-space-blue-800"
-                      >
-                        <span className="font-semibold text-ink-black-100">{u.name}</span>
-                        <span className="text-blue-slate-400">{u.email}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </form>
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: '#444' }}>
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full rounded-2xl border px-4 py-3 pr-11 text-sm outline-none transition"
+                  style={{ borderColor: '#ddd', background: 'white', color: '#333' }}
+                  onFocus={(e) => (e.target.style.borderColor = '#4dbfbf')}
+                  onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((s) => !s)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2"
+                  style={{ color: '#aaa' }}
+                >
+                  {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                {error}
+              </p>
+            )}
+
+            {/* Sign in */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-2xl py-3.5 text-sm font-bold text-white transition disabled:opacity-60"
+              style={{ background: loading ? '#c47a16' : '#e8891a' }}
+            >
+              {loading ? 'Signing in…' : 'Sign in'}
+            </button>
+
+            {/* Forgot password hint */}
+            <p className="text-center text-xs" style={{ color: '#888' }}>
+              Forgot password?
+            </p>
+          </form>
+
+          {/* Demo accounts */}
+          <div className="mt-7">
+            <p
+              className="text-[11px] font-semibold uppercase tracking-wider mb-2"
+              style={{ color: '#aaa' }}
+            >
+              Demo accounts
+            </p>
+            <div className="space-y-1.5">
+              {ROLES.find((r) => r.id === selectedRole)?.users.map((u) => (
+                <button
+                  key={u.email}
+                  type="button"
+                  onClick={() => fillDemo(u)}
+                  className="flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs transition"
+                  style={{ borderColor: '#ddd', background: 'white' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#4dbfbf';
+                    e.currentTarget.style.background  = '#f0fafa';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#ddd';
+                    e.currentTarget.style.background  = 'white';
+                  }}
+                >
+                  <span className="font-semibold" style={{ color: '#333' }}>{u.name}</span>
+                  <span style={{ color: '#999' }}>{u.email}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      </main>
 
-      <footer className="border-t border-deep-space-blue-800 px-6 py-3 text-center text-[11px] text-blue-slate-500">
-        © 2026 Coastal Chain Intelligence Platform — All data shown is simulated for demonstration purposes.
-      </footer>
+        </div>
+      </div>
     </div>
   );
 }

@@ -66,9 +66,16 @@ export const api = {
     request(`/ports/${portId}/inventory/adjust`, { method: 'POST', body: JSON.stringify(payload), portScope: portId }),
 
   getCongestion: (portId) => request(`/ports/${portId}/congestion`),
+  getCongestionPrediction: (portId, params = {}) => {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+    ).toString();
+    return request(`/ports/${portId}/congestion/predict${q ? `?${q}` : ''}`);
+  },
   getForecast: (portId) => request(`/ports/${portId}/forecast`),
 
   getRisks: (portId) => request(`/ports/${portId}/risks`),
+  getWeather: (portId) => request(`/ports/${portId}/weather`),
   createRisk: (portId, payload) =>
     request(`/ports/${portId}/risks`, { method: 'POST', body: JSON.stringify(payload), portScope: portId }),
   updateRisk: (portId, riskId, payload) =>

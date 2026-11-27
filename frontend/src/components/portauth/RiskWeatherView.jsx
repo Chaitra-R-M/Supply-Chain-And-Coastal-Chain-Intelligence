@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle, CloudRain, Plus, ShieldCheck, Waves, Wind } from 'lucide-react';
+import { AlertTriangle, CheckCircle, CloudRain, Plus, RefreshCw, ShieldCheck, Thermometer, Waves, Wind } from 'lucide-react';
 import { api } from '../../api/client';
 
 const SEVERITY_STYLE = {
@@ -11,6 +11,8 @@ const SEVERITY_STYLE = {
 
 export default function RiskWeatherView({ portId, onRefreshGlobal }) {
   const [data, setData] = useState(null);
+  const [weather, setWeather] = useState(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({
     category: 'Weather',
@@ -22,10 +24,24 @@ export default function RiskWeatherView({ portId, onRefreshGlobal }) {
   });
   const [error, setError] = useState('');
 
+  const loadWeather = async () => {
+    setWeatherLoading(true);
+    try {
+      const wx = await api.getWeather(portId);
+      setWeather(wx);
+    } catch {
+      // keep whatever was already in state; weather strip will show fallback data from risks endpoint
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
+
   const load = async () => {
     try {
       const res = await api.getRisks(portId);
       setData(res);
+      // Pre-populate weather from the risks response while the dedicated call loads
+      if (res.weather && !weather) setWeather(res.weather);
     } catch (e) {
       setError(e.message);
     }
@@ -33,6 +49,7 @@ export default function RiskWeatherView({ portId, onRefreshGlobal }) {
 
   useEffect(() => {
     load();
+    loadWeather();
   }, [portId]);
 
   const handleStatus = async (risk, status) => {
@@ -67,7 +84,9 @@ export default function RiskWeatherView({ portId, onRefreshGlobal }) {
 
   if (!data) return <div className="p-6 text-xs text-dusty-denim-500">Loading weather &amp; risk intelligence...</div>;
 
-  const { weather, risks } = data;
+  const { risks } = data;
+  // Use the dedicated live-weather state; fall back to what the risks endpoint returned
+  const wx = weather || data.weather;
 
   return (
     <div className="space-y-5">
@@ -80,43 +99,78 @@ export default function RiskWeatherView({ portId, onRefreshGlobal }) {
             Weather disruptions, vessel delay risks, congestion &amp; storage alerts with corrective action plans
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowAdd(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-ink-black-500 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-ink-black-600"
-        >
-          <Plus className="h-3.5 w-3.5" /> Log Risk / Weather Event
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => loadWeather()}
+            disabled={weatherLoading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-dusty-denim-200 bg-white px-3 py-2 text-xs font-semibold text-ink-black-800 hover:bg-dusty-denim-50 disabled:opacity-50 dark:border-deep-space-blue-700 dark:bg-deep-space-blue-900 dark:text-white"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${weatherLoading ? 'animate-spin' : ''}`} />
+            Refresh Weather
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-ink-black-500 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-ink-black-600"
+          >
+            <Plus className="h-3.5 w-3.5" /> Log Risk / Weather Event
+          </button>
+        </div>
       </div>
 
       {error && <div className="rounded-lg bg-rose-50 p-3 text-xs text-rose-700">{error}</div>}
 
+      {/* Live weather source badge */}
+      {wx?.source && (
+        <div className="flex items-center gap-2 text-[11px] text-dusty-denim-500 dark:text-blue-slate-400">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            wx.source.includes('live')
+              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+              : 'bg-eggshell-100 text-eggshell-700 dark:bg-eggshell-500/15 dark:text-eggshell-300'
+          }`}>
+            {wx.source.includes('live') ? '● Live' : '○ Estimated'}
+          </span>
+          <span>{wx.source}</span>
+          {wx.fetched_at && (
+            <span>· updated {new Date(wx.fetched_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+          )}
+        </div>
+      )}
+
       {/* Marine Weather Strip */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <div className="rounded-xl border border-dusty-denim-200 bg-white p-3.5 dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
-          <CloudRain className="h-4 w-4 text-ink-black-500 dark:text-eggshell-300" />
-          <p className="mt-1.5 text-sm font-bold">{weather.sea_state}</p>
-          <p className="text-[11px] text-dusty-denim-500 dark:text-blue-slate-400">Sea State</p>
+      {wx && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+          <div className="rounded-xl border border-dusty-denim-200 bg-white p-3.5 dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
+            <CloudRain className="h-4 w-4 text-ink-black-500 dark:text-eggshell-300" />
+            <p className="mt-1.5 text-sm font-bold">{wx.sea_state}</p>
+            <p className="text-[11px] text-dusty-denim-500 dark:text-blue-slate-400">Sea State</p>
+          </div>
+          <div className="rounded-xl border border-dusty-denim-200 bg-white p-3.5 dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
+            <Waves className="h-4 w-4 text-ink-black-500 dark:text-eggshell-300" />
+            <p className="mt-1.5 text-sm font-bold">{wx.wave_height_m} m</p>
+            <p className="text-[11px] text-dusty-denim-500 dark:text-blue-slate-400">Est. Wave Height</p>
+          </div>
+          <div className="rounded-xl border border-dusty-denim-200 bg-white p-3.5 dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
+            <Wind className="h-4 w-4 text-ink-black-500 dark:text-eggshell-300" />
+            <p className="mt-1.5 text-sm font-bold">{wx.wind_knots} kn</p>
+            <p className="text-[11px] text-dusty-denim-500 dark:text-blue-slate-400">Wind Speed</p>
+          </div>
+          <div className="rounded-xl border border-dusty-denim-200 bg-white p-3.5 dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
+            <p className="text-xs font-semibold text-dusty-denim-500 dark:text-blue-slate-400">Visibility</p>
+            <p className="mt-2 text-sm font-bold">{wx.visibility_nm} NM</p>
+          </div>
+          <div className="rounded-xl border border-dusty-denim-200 bg-white p-3.5 dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
+            <Thermometer className="h-4 w-4 text-ink-black-500 dark:text-eggshell-300" />
+            <p className="mt-1.5 text-sm font-bold">{wx.temperature_c ?? '—'} °C</p>
+            <p className="text-[11px] text-dusty-denim-500 dark:text-blue-slate-400">Temperature</p>
+          </div>
+          <div className="rounded-xl border border-dusty-denim-200 bg-white p-3.5 dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
+            <p className="text-xs font-semibold text-dusty-denim-500 dark:text-blue-slate-400">Tidal Window</p>
+            <p className="mt-2 text-sm font-bold">{wx.tidal_window}</p>
+          </div>
         </div>
-        <div className="rounded-xl border border-dusty-denim-200 bg-white p-3.5 dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
-          <Waves className="h-4 w-4 text-ink-black-500 dark:text-eggshell-300" />
-          <p className="mt-1.5 text-sm font-bold">{weather.wave_height_m} m</p>
-          <p className="text-[11px] text-dusty-denim-500 dark:text-blue-slate-400">Swell Height</p>
-        </div>
-        <div className="rounded-xl border border-dusty-denim-200 bg-white p-3.5 dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
-          <Wind className="h-4 w-4 text-ink-black-500 dark:text-eggshell-300" />
-          <p className="mt-1.5 text-sm font-bold">{weather.wind_knots} kn</p>
-          <p className="text-[11px] text-dusty-denim-500 dark:text-blue-slate-400">Peak Gusts</p>
-        </div>
-        <div className="rounded-xl border border-dusty-denim-200 bg-white p-3.5 dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
-          <p className="text-xs font-semibold text-dusty-denim-500 dark:text-blue-slate-400">Visibility</p>
-          <p className="mt-2 text-sm font-bold">{weather.visibility_nm} NM</p>
-        </div>
-        <div className="rounded-xl border border-dusty-denim-200 bg-white p-3.5 dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
-          <p className="text-xs font-semibold text-dusty-denim-500 dark:text-blue-slate-400">Tidal Window</p>
-          <p className="mt-2 text-sm font-bold">{weather.tidal_window}</p>
-        </div>
-      </div>
+      )}
 
       {/* Risk Cards */}
       <div className="space-y-3">

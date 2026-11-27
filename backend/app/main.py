@@ -2,9 +2,10 @@ import csv
 import io
 import json
 import uuid
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -17,6 +18,7 @@ from .schemas import (
     BerthUpdate,
     CargoCreate,
     CargoUpdate,
+    CongestionPredictRequest,
     InventoryAdjustRequest,
     PortUpdate,
     RiskCreate,
@@ -29,10 +31,13 @@ from .services import (
     build_forecast_and_supply_demand,
     build_report_data,
     compute_congestion_metrics,
+    fetch_live_weather,
     serialize_berth,
     serialize_vessel,
 )
-
+from .ml.predictor import CongestionInput, predict_congestion as _ml_predict_congestion
+load_dotenv()
+os.getenv("OPENWEATHER_API_KEY")
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -946,6 +951,115 @@ def get_congestion(port_id: str, db: Session = Depends(get_db)):
     return compute_congestion_metrics(db, port)
 
 
+@app.post("/api/ports/{port_id}/congestion/predict")
+def predict_congestion_ml(
+    port_id: str,
+    payload: CongestionPredictRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    ML-powered congestion prediction for the next 24 hours.
+
+    Pulls live berth/vessel state from the database and augments it with any
+    overrides or weather values supplied in the request body.  Returns the
+    model's predicted waiting-vessel count and congestion level alongside the
+    current rule-based metrics so the frontend can display both side-by-side.
+
+    Supported ports: Mangalore (INIXE / INNML) and Kochi (INCOK).
+    For other ports the endpoint still returns current rule-based congestion
+    with ml_prediction=null and a message explaining why.
+    """
+    port = get_port_or_404(db, port_id)
+
+    # Always return the live rule-based congestion first
+    current = compute_congestion_metrics(db, port)
+
+    # Check whether this port's code is known to the model
+    _SUPPORTED_CODES = {"INIXE", "INNML", "INCOK"}
+    if port.code not in _SUPPORTED_CODES:
+        return {
+            **current,
+            "ml_prediction": None,
+            "ml_message": (
+                f"ML congestion model does not yet cover port {port.code}. "
+                "Showing rule-based congestion metrics only."
+            ),
+        }
+
+    # Build a 7-day waiting history from the congestion trend data
+    trends = current.get("trends", [])
+    history_7 = [t["waiting_vessels"] for t in trends]
+    # Pad / trim to exactly 7 entries (oldest first)
+    while len(history_7) < 7:
+        history_7.insert(0, current["waiting_vessels"])
+    history_7 = history_7[-7:]
+
+    # Gather live berth counts
+    from .models import Berth as _Berth, Vessel as _Vessel
+    berths_q   = db.query(_Berth).filter(_Berth.port_id == port_id).all()
+    vessels_q  = db.query(_Vessel).filter(_Vessel.port_id == port_id).all()
+
+    berthed_live  = sum(1 for b in berths_q if b.status == "Occupied")
+    waiting_live  = sum(1 for v in vessels_q if v.status in ("Anchored", "Delayed"))
+    total_berths  = len(berths_q) or port.max_berths
+
+    # Step 5 — fetch live weather and use it when caller hasn't provided overrides
+    live_wx = fetch_live_weather(port.latitude, port.longitude, port_id)
+    wave_input     = payload.wave_height_forecast_m   if payload.wave_height_forecast_m   is not None else live_wx["wave_height_m"]
+    wind_input     = payload.wind_speed_forecast_kmh  if payload.wind_speed_forecast_kmh  is not None else round(live_wx["wind_knots"] * 1.852, 1)
+
+    # Request-body values override the live DB values when provided
+    ml_input = CongestionInput(
+        port_code=port.code,
+        waiting_vessels=payload.waiting_vessels  if payload.waiting_vessels  is not None else waiting_live,
+        berthed_vessels=payload.berthed_vessels  if payload.berthed_vessels  is not None else berthed_live,
+        total_berths=payload.total_berths        if payload.total_berths     is not None else total_berths,
+        waiting_last_7_days=history_7,
+        expected_arrivals_24h=payload.expected_arrivals_24h,
+        wave_height_forecast_m=wave_input,
+        wind_speed_forecast_kmh=wind_input,
+    )
+
+    result = _ml_predict_congestion(ml_input)
+
+    return {
+        **current,
+        "ml_prediction": {
+            "status": result.status,
+            "port_code_used": result.port_code_used,
+            "predicted_waiting_vessels_24h": result.predicted_waiting_vessels,
+            "predicted_congestion_level_24h": result.congestion_level,
+            "message": result.message,
+            "weather_used": {
+                "wave_height_m": wave_input,
+                "wind_speed_kmh": wind_input,
+                "source": live_wx.get("source", ""),
+            },
+        },
+    }
+
+
+@app.get("/api/ports/{port_id}/congestion/predict")
+def predict_congestion_ml_get(
+    port_id: str,
+    wave_height_forecast_m: Optional[float] = Query(default=None),
+    wind_speed_forecast_kmh: Optional[float] = Query(default=None),
+    expected_arrivals_24h: Optional[float] = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    """
+    Convenience GET version of the ML prediction endpoint —
+    accepts weather inputs as query params (no request body needed).
+    Useful for quick dashboard polling.
+    """
+    req = CongestionPredictRequest(
+        wave_height_forecast_m=wave_height_forecast_m,
+        wind_speed_forecast_kmh=wind_speed_forecast_kmh,
+        expected_arrivals_24h=expected_arrivals_24h,
+    )
+    return predict_congestion_ml(port_id, req, db)
+
+
 # ---------- 2.9 Demand Forecasting & 2.10 Supply-Demand Analysis ----------
 @app.get("/api/ports/{port_id}/forecast")
 def get_forecast(port_id: str, db: Session = Depends(get_db)):
@@ -953,21 +1067,39 @@ def get_forecast(port_id: str, db: Session = Depends(get_db)):
     return build_forecast_and_supply_demand(db, port)
 
 
+# ---------- 2.6 Live Weather ----------------------------------------
+@app.get("/api/ports/{port_id}/weather")
+def get_weather(port_id: str, db: Session = Depends(get_db)):
+    """
+    Live weather for a port from OpenWeatherMap (cached 10 min).
+    Falls back to route-table estimates when no API key is set.
+    """
+    port = get_port_or_404(db, port_id)
+    return fetch_live_weather(port.latitude, port.longitude, port_id)
+
+
 # ---------- 2.11 Risk Management ----------
 @app.get("/api/ports/{port_id}/risks")
 def list_risks(port_id: str, db: Session = Depends(get_db)):
-    get_port_or_404(db, port_id)
+    port = get_port_or_404(db, port_id)
     risks = db.query(RiskAlert).filter(RiskAlert.port_id == port_id).order_by(RiskAlert.created_at.desc()).all()
-    routes = db.query(CoastalRoute).filter(CoastalRoute.origin_port_id == port_id).all()
-    avg_wave = round(sum(r.wave_height_m for r in routes) / max(len(routes), 1), 1) if routes else 1.8
-    max_wind = round(max((r.wind_knots for r in routes), default=18.0), 1)
+
+    # Step 4 — use live weather; fall back to route-table values if needed
+    live_wx = fetch_live_weather(port.latitude, port.longitude, port_id)
+    avg_wave = live_wx["wave_height_m"]
+    max_wind = live_wx["wind_knots"]
+
     return {
         "weather": {
-            "sea_state": "Rough Swell" if avg_wave >= 2.2 else "Moderate",
+            "sea_state":     live_wx["sea_state"],
             "wave_height_m": avg_wave,
-            "wind_knots": max_wind,
-            "visibility_nm": 6.5 if avg_wave >= 2.2 else 9.0,
-            "tidal_window": "High Tide 14:20 IST (+1.6m)",
+            "wind_knots":    max_wind,
+            "visibility_nm": live_wx["visibility_nm"],
+            "temperature_c": live_wx.get("temperature_c", 28.0),
+            "description":   live_wx.get("description", ""),
+            "tidal_window":  live_wx["tidal_window"],
+            "source":        live_wx.get("source", ""),
+            "fetched_at":    live_wx.get("fetched_at", ""),
         },
         "risks": [
             {

@@ -13,28 +13,32 @@ import ShippingReports from './ShippingReports';
 
 export default function ShippingDashboard({ user, onLogout, theme, onToggleTheme }) {
   const [activeTab, setActiveTab] = useState('overview');
+  const dark = theme === 'dark';
 
   return (
-    <div className="min-h-screen bg-dusty-denim-50 text-ink-black-900 transition-colors dark:bg-ink-black-950 dark:text-ink-black-50">
+    <div className={`min-h-screen transition-colors ${dark ? 'bg-[#0f1a1a] text-[#e8f0f0]' : 'bg-[#f5f0e8] text-[#1a2e2e]'}`}>
       <ShippingNavBar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
-        theme={theme}
-        onToggleTheme={onToggleTheme}
         onLogout={onLogout}
         user={user}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
       />
-      <main className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
-        {activeTab === 'overview' && <ShippingOverview onNavigate={setActiveTab} />}
-        {activeTab === 'fleet' && <ShippingFleetManagement />}
-        {activeTab === 'voyages' && <ShippingVoyages />}
-        {activeTab === 'cargo_requests' && <ShippingCargoRequests />}
-        {activeTab === 'shipments' && <ShippingShipments />}
-        {activeTab === 'tracking' && <ShippingVesselTracking />}
-        {activeTab === 'routes' && <ShippingRoutePlanning />}
-        {activeTab === 'ports' && <ShippingPortCoordination />}
-        {activeTab === 'risks' && <ShippingRiskWeather />}
-        {activeTab === 'reports' && <ShippingReports />}
+      {/* offset left by sidebar width, offset top by top-bar height */}
+      <main className="ml-56 pt-[53px] min-h-screen">
+        <div className="px-6 py-6 max-w-[1400px]">
+          {activeTab === 'overview'       && <ShippingOverview onNavigate={setActiveTab} />}
+          {activeTab === 'fleet'          && <ShippingFleetManagement />}
+          {activeTab === 'voyages'        && <ShippingVoyages />}
+          {activeTab === 'cargo_requests' && <ShippingCargoRequests />}
+          {activeTab === 'shipments'      && <ShippingShipments />}
+          {activeTab === 'tracking'       && <ShippingVesselTracking />}
+          {activeTab === 'routes'         && <ShippingRoutePlanning />}
+          {activeTab === 'ports'          && <ShippingPortCoordination />}
+          {activeTab === 'risks'          && <ShippingRiskWeather />}
+          {activeTab === 'reports'        && <ShippingReports />}
+        </div>
       </main>
     </div>
   );

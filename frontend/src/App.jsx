@@ -127,75 +127,77 @@ export default function App() {
     );
   }
 
-  // Port Authority dashboard (existing, unchanged)
+  // Port Authority dashboard
   return (
-    <div className="min-h-screen bg-dusty-denim-50 text-ink-black-900 transition-colors dark:bg-ink-black-950 dark:text-ink-black-50">
+    <div className="min-h-screen bg-[#f5f0e8] text-[#1a2e2e] dark:bg-[#0f1a1a] dark:text-[#e8f0f0]">
       <TopNavBar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         ports={ports.length ? ports : [{ id: 'mangalore', name: 'Mangalore Port', code: 'INIXE' }]}
         selectedPortId={selectedPortId}
         onSelectPort={setSelectedPortId}
-        theme={theme}
-        onToggleTheme={toggleTheme}
         alerts={dashboard?.active_alerts || []}
         onSimulateTick={handleSimulateTick}
         simulating={simulating}
         onLogout={handleLogout}
-        user={session}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
-      <main className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
-        {error && (
-          <div className="mb-4 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-800 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
-            {error} — Ensure the FastAPI backend is running on port 8000.
-          </div>
-        )}
+      {/* offset left by sidebar width, offset top by top-bar height */}
+      <main className="ml-56 pt-[53px] min-h-screen">
+        <div className="px-6 py-6 max-w-[1400px]">
+          {error && (
+            <div className="mb-4 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-800">
+              {error} — Ensure the FastAPI backend is running on port 8000.
+            </div>
+          )}
 
-        {loading && !dashboard ? (
-          <div className="flex h-64 items-center justify-center text-sm font-medium text-dusty-denim-500 dark:text-blue-slate-300">
-            Loading Port Authority Command Center...
-          </div>
-        ) : (
-          <>
-            {activeTab === 'overview' && <OverviewView dashboard={dashboard} onNavigate={setActiveTab} />}
-            {activeTab === 'vessels' && (
-              <VesselTrafficView
-                portId={selectedPortId}
-                portName={selectedPortName}
-                onRefreshGlobal={() => loadDashboard(selectedPortId)}
-              />
-            )}
-            {activeTab === 'berths' && (
-              <BerthManagementView
-                portId={selectedPortId}
-                onRefreshGlobal={() => loadDashboard(selectedPortId)}
-              />
-            )}
-            {activeTab === 'cargo' && (
-              <CargoOperationsView
-                portId={selectedPortId}
-                onRefreshGlobal={() => loadDashboard(selectedPortId)}
-              />
-            )}
-            {activeTab === 'inventory' && (
-              <InventoryView
-                portId={selectedPortId}
-                onRefreshGlobal={() => loadDashboard(selectedPortId)}
-              />
-            )}
-            {activeTab === 'forecast' && <DemandForecastView portId={selectedPortId} />}
-            {activeTab === 'congestion' && <PortCongestionView portId={selectedPortId} />}
-            {activeTab === 'risks' && (
-              <RiskWeatherView
-                portId={selectedPortId}
-                onRefreshGlobal={() => loadDashboard(selectedPortId)}
-              />
-            )}
-            {activeTab === 'routes' && <CoastalRoutesView portId={selectedPortId} />}
-            {activeTab === 'reports' && <AnalyticsReportsView portId={selectedPortId} />}
-          </>
-        )}
+          {loading && !dashboard ? (
+            <div className="flex h-64 items-center justify-center text-sm font-medium text-[#667]">
+              Loading Port Authority Command Center…
+            </div>
+          ) : (
+            <>
+              {activeTab === 'overview' && <OverviewView dashboard={dashboard} onNavigate={setActiveTab} />}
+              {activeTab === 'vessels' && (
+                <VesselTrafficView
+                  portId={selectedPortId}
+                  portName={selectedPortName}
+                  onRefreshGlobal={() => loadDashboard(selectedPortId)}
+                />
+              )}
+              {activeTab === 'berths' && (
+                <BerthManagementView
+                  portId={selectedPortId}
+                  onRefreshGlobal={() => loadDashboard(selectedPortId)}
+                />
+              )}
+              {activeTab === 'cargo' && (
+                <CargoOperationsView
+                  portId={selectedPortId}
+                  onRefreshGlobal={() => loadDashboard(selectedPortId)}
+                />
+              )}
+              {activeTab === 'inventory' && (
+                <InventoryView
+                  portId={selectedPortId}
+                  onRefreshGlobal={() => loadDashboard(selectedPortId)}
+                />
+              )}
+              {activeTab === 'forecast'   && <DemandForecastView portId={selectedPortId} />}
+              {activeTab === 'congestion' && <PortCongestionView portId={selectedPortId} />}
+              {activeTab === 'risks' && (
+                <RiskWeatherView
+                  portId={selectedPortId}
+                  onRefreshGlobal={() => loadDashboard(selectedPortId)}
+                />
+              )}
+              {activeTab === 'routes'  && <CoastalRoutesView portId={selectedPortId} />}
+              {activeTab === 'reports' && <AnalyticsReportsView portId={selectedPortId} />}
+            </>
+          )}
+        </div>
       </main>
     </div>
   );

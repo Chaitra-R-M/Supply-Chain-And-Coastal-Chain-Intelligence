@@ -12,138 +12,51 @@ import {
   Moon,
   Navigation,
   Package,
-  RefreshCw,
   Ship,
   Sun,
+  Waves,
 } from 'lucide-react';
 
 export const SHIPPING_NAV = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'fleet', label: 'Fleet Management', icon: Ship },
-  { id: 'voyages', label: 'Voyages', icon: Navigation },
-  { id: 'cargo_requests', label: 'Cargo Requests', icon: Package },
-  { id: 'shipments', label: 'Shipments', icon: Container },
-  { id: 'tracking', label: 'Vessel Tracking', icon: Map },
-  { id: 'routes', label: 'Route Planning', icon: Compass },
-  { id: 'ports', label: 'Port Coordination', icon: Anchor },
-  { id: 'risks', label: 'Risk & Weather', icon: CloudLightning },
-  { id: 'reports', label: 'Reports', icon: BarChart3 },
+  { id: 'overview',       label: 'Overview',           icon: LayoutDashboard },
+  { id: 'fleet',          label: 'Fleet Management',   icon: Ship },
+  { id: 'voyages',        label: 'Voyages',            icon: Navigation },
+  { id: 'cargo_requests', label: 'Cargo Requests',     icon: Package },
+  { id: 'shipments',      label: 'Shipments',          icon: Container },
+  { id: 'tracking',       label: 'Vessel Tracking',    icon: Map },
+  { id: 'routes',         label: 'Route Planning',     icon: Compass },
+  { id: 'ports',          label: 'Port Coordination',  icon: Anchor },
+  { id: 'risks',          label: 'Risk & Weather',     icon: CloudLightning },
+  { id: 'reports',        label: 'Reports',            icon: BarChart3 },
 ];
 
-export default function ShippingNavBar({ activeTab, onSelectTab, theme, onToggleTheme, onLogout, user }) {
-  const [alertsOpen, setAlertsOpen] = useState(false);
+const ALERTS = [
+  { id: 1, title: 'High Swell Advisory – Mangalore–Kochi Corridor', severity: 'High' },
+  { id: 2, title: 'MV Bharat route deviation detected', severity: 'Moderate' },
+];
 
-  const alerts = [
-    { id: 1, title: 'High Swell Advisory – Mangalore–Kochi Corridor', severity: 'High' },
-    { id: 2, title: 'MV Bharat route deviation detected', severity: 'Moderate' },
-  ];
+export default function ShippingNavBar({ activeTab, onSelectTab, onLogout, theme, onToggleTheme }) {
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const dark = theme === 'dark';
 
   return (
-    <header className="sticky top-0 z-40 border-b border-deep-space-blue-800/80 bg-deep-space-blue-900 text-ink-black-50 shadow-md dark:bg-ink-black-950 dark:border-deep-space-blue-800">
-      {/* Top Utility Row */}
-      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+    <>
+      {/* ── Sidebar ───────────────────────────────────────────────── */}
+      <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col bg-[#1a2e2e] text-white dark:bg-[#0d1a1a]">
+
         {/* Brand */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink-black-500/25 border border-ink-black-400/40 text-eggshell-300">
-            <Ship className="h-5 w-5" />
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8891a]">
+            <Waves className="h-5 w-5 text-white" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold tracking-tight text-ink-black-50 sm:text-base">
-                Coastal Chain Intelligence
-              </span>
-              <span className="hidden rounded-full border border-ink-black-400/40 bg-ink-black-500/15 px-2 py-0.5 text-[11px] font-semibold text-ink-black-200 sm:inline-flex items-center gap-1">
-                <Ship className="h-3 w-3" /> Shipping Company
-              </span>
-            </div>
-            <p className="hidden text-[11px] text-blue-slate-300 md:block">Fleet, Voyage &amp; Cargo Management</p>
+          <div className="leading-tight">
+            <p className="text-sm font-bold text-white">Coastal Chain</p>
+            <p className="text-[11px] text-[#9bbaba]">Shipping Company</p>
           </div>
         </div>
 
-        {/* Right Controls */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-          {/* Live Indicator */}
-          <div className="hidden items-center gap-1.5 rounded-lg border border-deep-space-blue-700 bg-deep-space-blue-800/70 px-2.5 py-1.5 text-xs font-medium text-blue-slate-100 lg:flex">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-            </span>
-            <span>Live (UTC+5:30)</span>
-          </div>
-
-          {/* Theme Toggle */}
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            aria-label="Toggle Theme"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-deep-space-blue-700 bg-deep-space-blue-800/80 px-2.5 py-1.5 text-xs font-medium text-eggshell-200 transition hover:bg-deep-space-blue-700"
-          >
-            {theme === 'dark' ? (
-              <><Sun className="h-3.5 w-3.5 text-eggshell-300" /><span className="hidden md:inline">Light</span></>
-            ) : (
-              <><Moon className="h-3.5 w-3.5" /><span className="hidden md:inline">Dark</span></>
-            )}
-          </button>
-
-          {/* Notifications Bell */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setAlertsOpen((o) => !o)}
-              aria-label="Active Alerts"
-              className="relative rounded-lg border border-deep-space-blue-700 bg-deep-space-blue-800/80 p-1.5 text-blue-slate-100 transition hover:bg-deep-space-blue-700"
-            >
-              <Bell className="h-4 w-4" />
-              {alerts.length > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
-                  {alerts.length}
-                </span>
-              )}
-            </button>
-
-            {alertsOpen && (
-              <div className="absolute right-0 mt-2 w-80 rounded-xl border border-dusty-denim-200 bg-white p-3 text-ink-black-900 shadow-xl dark:border-deep-space-blue-700 dark:bg-deep-space-blue-900 dark:text-ink-black-50">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-dusty-denim-600 dark:text-blue-slate-300">
-                    Fleet Alerts ({alerts.length})
-                  </span>
-                  <button type="button" onClick={() => { setAlertsOpen(false); onSelectTab('risks'); }} className="text-xs font-semibold text-ink-black-500 hover:underline dark:text-ink-black-300">View all</button>
-                </div>
-                <div className="space-y-2">
-                  {alerts.map((a) => (
-                    <div key={a.id} className="rounded-lg border border-dusty-denim-100 bg-dusty-denim-50 p-2 text-xs dark:border-deep-space-blue-800 dark:bg-ink-black-950/60">
-                      <div className="flex items-center justify-between font-semibold">
-                        <span className="truncate pr-2">{a.title}</span>
-                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${a.severity === 'High' ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300' : 'bg-eggshell-500/20 text-eggshell-700 dark:text-eggshell-300'}`}>{a.severity}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* User pill */}
-          <div className="hidden items-center gap-1.5 rounded-lg border border-deep-space-blue-700 bg-deep-space-blue-800/80 px-2.5 py-1.5 text-xs font-medium text-blue-slate-100 xl:flex">
-            <Navigation className="h-3.5 w-3.5 text-eggshell-400" />
-            <span>{user?.name || 'Fleet Manager'}</span>
-          </div>
-
-          {/* Logout */}
-          <button
-            type="button"
-            onClick={onLogout}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-700/40 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-300 transition hover:bg-rose-500/20"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Sign out</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Horizontal Nav */}
-      <nav aria-label="Shipping Company Navigation" className="border-t border-deep-space-blue-800/80 bg-deep-space-blue-950/90 dark:bg-ink-black-900/90">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-1 overflow-x-auto px-4 py-1.5 no-scrollbar sm:px-6">
+        {/* Nav items */}
+        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
           {SHIPPING_NAV.map((item) => {
             const Icon = item.icon;
             const active = activeTab === item.id;
@@ -152,19 +65,105 @@ export default function ShippingNavBar({ activeTab, onSelectTab, theme, onToggle
                 key={item.id}
                 type="button"
                 onClick={() => onSelectTab(item.id)}
-                className={`group flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-left transition-all ${
                   active
-                    ? 'bg-ink-black-500 text-white shadow-sm shadow-ink-black-500/30 dark:bg-ink-black-500'
-                    : 'text-blue-slate-200 hover:bg-deep-space-blue-800/80 hover:text-white dark:text-blue-slate-300 dark:hover:bg-deep-space-blue-800'
+                    ? 'bg-[#e8891a] text-white'
+                    : 'text-[#c8e0e0] hover:bg-white/10 hover:text-white'
                 }`}
               >
-                <Icon className={`h-3.5 w-3.5 ${active ? 'text-eggshell-200' : 'text-blue-slate-400 group-hover:text-eggshell-300'}`} />
+                <Icon className="h-4 w-4 shrink-0" />
                 <span>{item.label}</span>
               </button>
             );
           })}
+        </nav>
+
+        {/* Sign out */}
+        <div className="border-t border-white/10 p-3">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/20 px-3 py-2.5 text-sm font-medium text-[#c8e0e0] transition hover:bg-white/10 hover:text-white"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
         </div>
-      </nav>
-    </header>
+      </aside>
+
+      {/* ── Top bar ───────────────────────────────────────────────── */}
+      <header className={`fixed top-0 left-56 right-0 z-30 flex items-center justify-end gap-3 border-b px-6 py-3 backdrop-blur-sm transition-colors ${
+        dark
+          ? 'border-[#1e3a3a] bg-[#0f1a1a]/95 text-[#e8f0f0]'
+          : 'border-[#e2e8f0] bg-white/95 text-[#1a2e2e]'
+      }`}>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setAlertsOpen((o) => !o)}
+            aria-label="Fleet Alerts"
+            className={`relative rounded-full border p-2 transition ${
+              dark
+                ? 'border-[#2a4a4a] bg-[#1a3030] text-[#c8e0e0] hover:bg-[#1e3838]'
+                : 'border-[#dde] bg-white text-[#555] hover:bg-[#f0f4f4]'
+            }`}
+          >
+            <Bell className="h-4 w-4" />
+            {ALERTS.length > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                {ALERTS.length}
+              </span>
+            )}
+          </button>
+
+          {alertsOpen && (
+            <div className={`absolute right-0 mt-2 w-80 rounded-xl border p-3 shadow-xl ${
+              dark ? 'border-[#2a4a4a] bg-[#122020]' : 'border-[#e2e8f0] bg-white'
+            }`}>
+              <div className="mb-2 flex items-center justify-between">
+                <span className={`text-xs font-bold uppercase tracking-wider ${dark ? 'text-[#9bbaba]' : 'text-[#667]'}`}>
+                  Fleet Alerts ({ALERTS.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setAlertsOpen(false); onSelectTab('risks'); }}
+                  className="text-xs font-semibold text-[#1a9090] hover:underline"
+                >
+                  View all
+                </button>
+              </div>
+              <div className="space-y-2">
+                {ALERTS.map((a) => (
+                  <div key={a.id} className={`rounded-lg border p-2 text-xs ${
+                    dark ? 'border-[#2a4a4a] bg-[#1a3030] text-[#e8f0f0]' : 'border-[#eee] bg-[#fafafa] text-[#333]'
+                  }`}>
+                    <div className="flex items-center justify-between font-semibold">
+                      <span className="truncate pr-2">{a.title}</span>
+                      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
+                        a.severity === 'High' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-700'
+                      }`}>{a.severity}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Theme toggle ──────────────────────────────────────────── */}
+        <button
+          type="button"
+          onClick={onToggleTheme}
+          aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+          className={`flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-all hover:scale-105 ${
+            dark
+              ? 'border-[#2a4a4a] bg-[#1a3030] text-[#f5c842] hover:bg-[#1e3838]'
+              : 'border-[#dde] bg-white text-[#555] hover:bg-[#f0f4f4]'
+          }`}
+        >
+          {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+      </header>
+    </>
   );
 }

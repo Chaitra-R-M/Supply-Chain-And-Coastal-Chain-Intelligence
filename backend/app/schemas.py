@@ -3,6 +3,16 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
+class CongestionPredictRequest(BaseModel):
+    """Request body for the ML congestion prediction endpoint."""
+    waiting_vessels: Optional[int] = Field(None, ge=0, description="Override: vessels currently waiting")
+    berthed_vessels: Optional[int] = Field(None, ge=0, description="Override: vessels currently at berth")
+    total_berths: Optional[int] = Field(None, ge=1, description="Override: total berth slots")
+    expected_arrivals_24h: Optional[float] = Field(None, ge=0)
+    wave_height_forecast_m: Optional[float] = Field(None, ge=0)
+    wind_speed_forecast_kmh: Optional[float] = Field(None, ge=0)
+
+
 class PortUpdate(BaseModel):
     name: Optional[str] = None
     max_berths: Optional[int] = Field(None, ge=1, le=50)
