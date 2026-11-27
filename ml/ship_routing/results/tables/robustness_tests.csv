@@ -1,0 +1,12 @@
+test,PASS,detail
+invalid source port,True,"Unknown port 'Atlantis'. Valid ports: {'INNSA': 'Mumbai (JNPT / Nhava Sheva)', 'INMRM': 'M"
+invalid destination port,True,"Unknown port 'Nowhere'. Valid ports: {'INNSA': 'Mumbai (JNPT / Nhava Sheva)', 'INMRM': 'Mo"
+same source and destination,True,source_port and destination_port must be different
+unknown vessel type,True,"Unknown vessel_type 'submarine'. Known types: ['bulk_carrier', 'container_ship', 'general_"
+missing weather -> conservative,True,"2 segment(s) flagged, risk Moderate"
+missing weather -> block policy avoids gap,True,INNSA -> WP_MUM_OFF -> WP_ARAB_N -> WP_ARAB_W -> WP_NINE_W -> WP_NINE_E -> WP_KOC_OFF -> INCOK
+weather API failure handled,True,Weather data missing for 111 of 111 sample points (policy: conservative).
+provider exception handled,True,route returned with weather marked unverified
+Open-Meteo parsing + 429 retry (mocked),True,"max wave 2.5 m, max wind 22.0 kn; null cell -> 'no wave data for this cell/time'"
+disconnected graph,True,No navigable connection exists between INNSA and XXISO for this vessel (graph is disconnec
+manual Dijkstra == NetworkX == A*,True,checked 5 scenarios

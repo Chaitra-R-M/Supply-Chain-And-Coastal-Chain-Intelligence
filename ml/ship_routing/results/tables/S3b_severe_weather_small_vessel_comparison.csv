@@ -1,0 +1,13 @@
+Metric,Shortest-distance route,Weather-aware route
+Path,INNSA -> WP_MUM_OFF -> WP_GOA_OFF -> WP_MNG_OFF -> WP_KOC_OFF -> WP_CAPE_S -> WP_TUT_OFF -> WP_PAMBAN -> WP_PALK_BAY -> WP_PALK_STR -> WP_EAST_MID -> WP_CHE_OFF -> INMAA,INNSA -> WP_MUM_OFF -> WP_GOA_OFF -> WP_MNG_OFF -> WP_KOC_OFF -> WP_CAPE_S -> WP_TUT_OFF -> WP_PAMBAN -> WP_PALK_BAY -> WP_PALK_STR -> WP_EAST_MID -> WP_CHE_OFF -> INMAA
+Distance (km),2263.7,2263.7
+Distance (nautical miles),1222.3,1222.3
+Estimated travel time,5 d 2 h 14 min,5 d 2 h 14 min
+ETA (UTC),2026-12-06T02:13:57Z,2026-12-06T02:13:57Z
+Total weather penalty,0.0,0.0
+Total route cost,2263.7,2263.7
+Overall weather risk,Low,Low
+High-risk segments,0,0
+Severe-risk segments,0,0
+Segments with missing weather,0,0
+Meets all constraints,True,True
