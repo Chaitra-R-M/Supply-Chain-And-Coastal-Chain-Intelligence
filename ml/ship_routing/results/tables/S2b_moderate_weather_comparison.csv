@@ -1,0 +1,13 @@
+Metric,Shortest-distance route,Weather-aware route
+Path,INNSA -> WP_MUM_OFF -> WP_GOA_OFF -> WP_MNG_OFF -> WP_KOC_OFF -> INCOK,INNSA -> WP_MUM_OFF -> WP_GOA_OFF -> WP_MNG_OFF -> WP_KOC_OFF -> INCOK
+Distance (km),1171.8,1171.8
+Distance (nautical miles),632.7,632.7
+Estimated travel time,1 d 16 h 43 min,1 d 16 h 43 min
+ETA (UTC),2026-12-02T16:43:29Z,2026-12-02T16:43:29Z
+Total weather penalty,199.4,199.4
+Total route cost,1371.2,1371.2
+Overall weather risk,Moderate,Moderate
+High-risk segments,0,0
+Severe-risk segments,0,0
+Segments with missing weather,0,0
+Meets all constraints,True,True

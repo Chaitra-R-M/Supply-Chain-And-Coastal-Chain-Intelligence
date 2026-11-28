@@ -1,0 +1,14 @@
+# Weather-Aware Ship Routing module (ml/ship_routing)
+# Core routing + weather service
+networkx>=3.0
+numpy>=1.24
+pandas>=2.0
+requests>=2.31
+
+# Visualisation (notebook and reports)
+matplotlib>=3.7
+folium>=0.14
+
+# Future API service - uncomment when you build the FastAPI layer
+# fastapi>=0.110
+# uvicorn[standard]>=0.29

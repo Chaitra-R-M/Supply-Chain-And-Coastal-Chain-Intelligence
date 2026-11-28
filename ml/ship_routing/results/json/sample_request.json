@@ -1,0 +1,12 @@
+{
+  "source_port": "INNSA",
+  "destination_port": "INCOK",
+  "vessel_speed": 15,
+  "vessel_type": "container_ship",
+  "vessel_specs": {
+    "draft_m": 12.5,
+    "max_wave_height_m": 6.0,
+    "max_wind_speed_kn": 45
+  },
+  "departure_time": "2026-12-01T00:00:00Z"
+}

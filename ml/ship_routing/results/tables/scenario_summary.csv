@@ -1,0 +1,6 @@
+scenario,status,expected,PASS,shortest_km,shortest_risk,recommended_km,recommended_risk,high_segments (rec),severe_segments (rec),travel_time (rec)
+S1_normal_weather,ok,same_route,True,2907.0,Low,2907.0,Low,0.0,0.0,4 d 2 h 06 min
+S2_bad_weather_on_shortest,ok,detour,True,1171.8,High,1692.3,Low,0.0,0.0,2 d 9 h 07 min
+S2b_moderate_weather,ok,same_route,True,1171.8,Moderate,1171.8,Moderate,0.0,0.0,1 d 16 h 43 min
+S3_severe_weather,no_feasible_route,no_feasible_route,True,2907.0,Severe,,,,,
+S3b_severe_weather_small_vessel,ok,ok,True,2263.7,Low,2263.7,Low,0.0,0.0,5 d 2 h 14 min
