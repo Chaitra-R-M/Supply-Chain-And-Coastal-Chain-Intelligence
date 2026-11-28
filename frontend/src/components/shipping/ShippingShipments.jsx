@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Clock, Container, Package, Ship } from 'lucide-react';
+import { CheckCircle2, Clock, Container, Package, Ship, SlidersHorizontal } from 'lucide-react';
 
 const shipments = [
   { id: 'SHP-5041', voyage: 'V-1021', cargo: 'Rice', owner: 'Agro India Exports', quantity: '500 MT', from: 'Mangalore Port', to: 'Kochi Port', vessel: 'MV Bharat', depart: 'Dec 16, 08:00', arrive: 'Dec 18, 14:30', status: 'In Transit', loading_pct: 100, unloading_pct: 0 },
@@ -20,13 +20,31 @@ const STATUS_STYLES = {
 };
 
 export default function ShippingShipments() {
+  const [data, setData]   = useState(shipments.map((s) => ({ ...s })));
   const [filter, setFilter] = useState('All');
+  const [updating, setUpdating] = useState(null);
+  const [toast, setToast] = useState('');
 
-  const filtered = filter === 'All' ? shipments : shipments.filter((s) => s.status === filter);
+  const showToast = (m) => { setToast(m); setTimeout(() => setToast(''), 3000); };
+
+  const filtered = filter === 'All' ? data : data.filter((s) => s.status === filter);
   const counts = {
-    'In Transit': shipments.filter((s) => s.status === 'In Transit').length,
-    Delayed: shipments.filter((s) => s.status === 'Delayed').length,
-    Delivered: shipments.filter((s) => s.status === 'Delivered').length,
+    'In Transit': data.filter((s) => s.status === 'In Transit').length,
+    Delayed:      data.filter((s) => s.status === 'Delayed').length,
+    Delivered:    data.filter((s) => s.status === 'Delivered').length,
+  };
+
+  const updateProgress = (id, field, value) => {
+    const val = Math.min(100, Math.max(0, parseInt(value) || 0));
+    setData((prev) => prev.map((s) => {
+      if (s.id !== id) return s;
+      const updated = { ...s, [field]: val };
+      if (updated.unloading_pct === 100) updated.status = 'Delivered';
+      else if (updated.loading_pct === 100 && updated.unloading_pct === 0) updated.status = s.status === 'Delayed' ? 'Delayed' : 'In Transit';
+      return updated;
+    }));
+    showToast(`${id} ${field.replace('_pct', '')} updated to ${val}%`);
+    setUpdating(null);
   };
 
   return (
@@ -65,20 +83,14 @@ export default function ShippingShipments() {
       {/* Filter */}
       <div className="flex flex-wrap gap-2">
         {['All', 'In Transit', 'Delayed', 'Delivered'].map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-              filter === f
-                ? 'border-ink-black-500 bg-ink-black-500 text-white'
-                : 'border-dusty-denim-200 text-dusty-denim-600 hover:border-ink-black-300 dark:border-deep-space-blue-700 dark:text-blue-slate-300'
-            }`}
-          >
+          <button key={f} type="button" onClick={() => setFilter(f)}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${filter===f?'border-ink-black-500 bg-ink-black-500 text-white':'border-dusty-denim-200 text-dusty-denim-600 hover:border-ink-black-300 dark:border-deep-space-blue-700 dark:text-blue-slate-300'}`}>
             {f}
           </button>
         ))}
       </div>
+
+      {toast && <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">{toast}</div>}
 
       {/* Shipments Table */}
       <div className="rounded-xl border border-dusty-denim-200 bg-white p-4 shadow-sm dark:border-deep-space-blue-800 dark:bg-deep-space-blue-900">
@@ -117,21 +129,47 @@ export default function ShippingShipments() {
                     <div>Dep: {s.depart}</div>
                     <div>Arr: {s.arrive}</div>
                   </td>
+                  {/* Loading — editable */}
                   <td className="py-2.5 pr-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-2 w-16 rounded-full bg-dusty-denim-100 dark:bg-deep-space-blue-800">
-                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${s.loading_pct}%` }} />
+                    {updating === `${s.id}-loading` ? (
+                      <div className="flex items-center gap-1">
+                        <input type="number" min="0" max="100" defaultValue={s.loading_pct}
+                          onBlur={(e) => updateProgress(s.id,'loading_pct',e.target.value)}
+                          onKeyDown={(e) => { if (e.key==='Enter') updateProgress(s.id,'loading_pct',e.target.value); }}
+                          className="w-14 rounded border border-dusty-denim-200 px-1 py-0.5 text-xs dark:border-deep-space-blue-700 dark:bg-ink-black-950 dark:text-white" autoFocus />
+                        <span className="text-[10px]">%</span>
                       </div>
-                      <span className="font-semibold">{s.loading_pct}%</span>
-                    </div>
+                    ) : (
+                      <button onClick={() => setUpdating(`${s.id}-loading`)} title="Click to update"
+                        className="flex items-center gap-1.5 hover:opacity-80">
+                        <div className="h-2 w-16 rounded-full bg-dusty-denim-100 dark:bg-deep-space-blue-800">
+                          <div className="h-full rounded-full bg-emerald-500" style={{ width:`${s.loading_pct}%` }} />
+                        </div>
+                        <span className="font-semibold">{s.loading_pct}%</span>
+                        <SlidersHorizontal className="h-3 w-3 text-dusty-denim-400" />
+                      </button>
+                    )}
                   </td>
+                  {/* Unloading — editable */}
                   <td className="py-2.5 pr-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-2 w-16 rounded-full bg-dusty-denim-100 dark:bg-deep-space-blue-800">
-                        <div className="h-full rounded-full bg-ink-black-500" style={{ width: `${s.unloading_pct}%` }} />
+                    {updating === `${s.id}-unloading` ? (
+                      <div className="flex items-center gap-1">
+                        <input type="number" min="0" max="100" defaultValue={s.unloading_pct}
+                          onBlur={(e) => updateProgress(s.id,'unloading_pct',e.target.value)}
+                          onKeyDown={(e) => { if (e.key==='Enter') updateProgress(s.id,'unloading_pct',e.target.value); }}
+                          className="w-14 rounded border border-dusty-denim-200 px-1 py-0.5 text-xs dark:border-deep-space-blue-700 dark:bg-ink-black-950 dark:text-white" autoFocus />
+                        <span className="text-[10px]">%</span>
                       </div>
-                      <span className="font-semibold">{s.unloading_pct}%</span>
-                    </div>
+                    ) : (
+                      <button onClick={() => setUpdating(`${s.id}-unloading`)} title="Click to update"
+                        className="flex items-center gap-1.5 hover:opacity-80">
+                        <div className="h-2 w-16 rounded-full bg-dusty-denim-100 dark:bg-deep-space-blue-800">
+                          <div className="h-full rounded-full bg-ink-black-500" style={{ width:`${s.unloading_pct}%` }} />
+                        </div>
+                        <span className="font-semibold">{s.unloading_pct}%</span>
+                        <SlidersHorizontal className="h-3 w-3 text-dusty-denim-400" />
+                      </button>
+                    )}
                   </td>
                   <td className="py-2.5">
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[s.status] || ''}`}>

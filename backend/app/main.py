@@ -8,6 +8,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .database import Base, SessionLocal, engine, get_db
@@ -36,6 +37,61 @@ from .services import (
     serialize_vessel,
 )
 from .ml.predictor import CongestionInput, predict_congestion as _ml_predict_congestion
+
+# ---------------------------------------------------------------------------
+# Ship Routing — load graph + weather provider ONCE at startup
+# ---------------------------------------------------------------------------
+import os as _os
+import logging as _logging
+
+_routing_logger = _logging.getLogger("ship_routing")
+
+def _init_routing():
+    """
+    Load the maritime waypoint graph and Open-Meteo weather provider once.
+    Returns (graph, provider, config) or (None, None, None) on failure so
+    the rest of the API still starts even if routing deps are missing.
+    """
+    try:
+        from .ship_routing.routing import (
+            load_network_from_csv, RoutingConfig,
+            list_ports as _sr_list_ports, VESSEL_PRESETS,
+            plan_route as _sr_plan_route, to_json_safe as _sr_to_json_safe,
+        )
+        from .ship_routing.weather_service import OpenMeteoProvider, WeatherConfig
+        from .ship_routing.sample_network import DATA_NOTICE
+
+        _base = _os.path.dirname(_os.path.abspath(__file__))
+        _data = _os.path.join(_base, "ship_routing", "data")
+        _G = load_network_from_csv(
+            _os.path.join(_data, "waypoints.csv"),
+            _os.path.join(_data, "edges.csv"),
+            DATA_NOTICE,
+        )
+        _cache_dir = _os.path.join(_base, "ship_routing", "results", "cache")
+        _os.makedirs(_cache_dir, exist_ok=True)
+        _provider = OpenMeteoProvider(
+            WeatherConfig(cache_file=_os.path.join(_cache_dir, "weather_cache.json"))
+        )
+        _config = RoutingConfig()
+        _routing_logger.info(
+            "Ship routing ready: %d nodes, %d edges", _G.number_of_nodes(), _G.number_of_edges()
+        )
+        return _G, _provider, _config, _sr_list_ports, VESSEL_PRESETS, _sr_plan_route, _sr_to_json_safe
+    except Exception as _exc:
+        _routing_logger.warning("Ship routing init failed: %s — routing endpoints will return 503", _exc)
+        return None, None, None, None, None, None, None
+
+
+(
+    _ROUTING_GRAPH,
+    _ROUTING_PROVIDER,
+    _ROUTING_CONFIG,
+    _sr_list_ports,
+    _VESSEL_PRESETS,
+    _sr_plan_route,
+    _sr_to_json_safe,
+) = _init_routing()
 load_dotenv()
 os.getenv("OPENWEATHER_API_KEY")
 Base.metadata.create_all(bind=engine)
@@ -1257,3 +1313,356 @@ def export_reports(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{port_id}-{period}-report.csv"'},
     )
+
+
+# ---------- Shipping Company Reports ----------
+@app.get("/api/shipping/reports")
+def get_shipping_reports(
+    period: str = Query(default="weekly", pattern="^(daily|weekly|monthly)$"),
+    db: Session = Depends(get_db),
+):
+    """Voyage-level performance reports for the Shipping Company role."""
+    from datetime import datetime, timezone
+
+    mult = {"daily": 0.04, "weekly": 0.25, "monthly": 1.0}.get(period, 0.25)
+    labels = {
+        "daily":   ["00:00","04:00","08:00","12:00","16:00","20:00"],
+        "weekly":  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+        "monthly": ["Wk 1","Wk 2","Wk 3","Wk 4"],
+    }.get(period, ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
+
+    base_mt      = 5420.0 * mult
+    base_rev     = 3800000 * mult
+    on_time_pct  = 83
+    util_pct     = 86
+    avg_turn_hrs = 13.0
+
+    series = []
+    for idx, lbl in enumerate(labels):
+        f = 0.85 + (idx % 4) * 0.1
+        series.append({
+            "label":          lbl,
+            "mt":             round((base_mt / len(labels)) * f, 1),
+            "voyages":        max(1, round(18 * mult / len(labels))),
+            "revenue_inr":    round((base_rev / len(labels)) * f),
+        })
+
+    vessel_perf = [
+        {"vessel": "MV Bharat",      "voyages": round(7*mult), "mt": round(2200*mult), "util": 94, "on_time": "86%"},
+        {"vessel": "SS Konkan",       "voyages": round(4*mult), "mt": round(1400*mult), "util": 80, "on_time": "75%"},
+        {"vessel": "MV Deccan Star",  "voyages": round(4*mult), "mt": round(1200*mult), "util": 76, "on_time": "100%"},
+        {"vessel": "MV Sahyadri",     "voyages": round(3*mult), "mt": round(620*mult),  "util": 58, "on_time": "67%"},
+    ]
+
+    cargo_history = [
+        {"shipment": "SHP-5041", "cargo": "Basmati Rice",   "qty_mt": 500,  "from": "Mangalore", "to": "Kochi",    "cost_inr": 185000, "status": "In Transit",  "vessel": "MV Bharat"},
+        {"shipment": "SHP-5040", "cargo": "Steel",           "qty_mt": 300,  "from": "Mumbai",    "to": "Mangalore","cost_inr": 145000, "status": "Delivered",    "vessel": "SS Konkan"},
+        {"shipment": "SHP-5039", "cargo": "Coal",            "qty_mt": 200,  "from": "Kochi",     "to": "Tuticorin","cost_inr": 92000,  "status": "In Transit",  "vessel": "MV Deccan Star"},
+        {"shipment": "SHP-5038", "cargo": "Spices",          "qty_mt": 150,  "from": "Mormugao",  "to": "Mumbai",   "cost_inr": 68000,  "status": "Delayed",     "vessel": "MV Sahyadri"},
+        {"shipment": "SHP-5037", "cargo": "Cement",          "qty_mt": 420,  "from": "Mangalore", "to": "Chennai",  "cost_inr": 178000, "status": "Delivered",   "vessel": "MV Western Ghats"},
+    ]
+
+    return {
+        "period": period,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary": {
+            "voyages_completed": round(18 * mult),
+            "cargo_moved_mt":    round(base_mt, 1),
+            "on_time_pct":       on_time_pct,
+            "avg_turnaround_hrs":avg_turn_hrs,
+            "revenue_inr":       round(base_rev),
+            "utilization_pct":   util_pct,
+            "delayed_voyages":   round(2 * mult),
+        },
+        "series":        series,
+        "vessel_perf":   vessel_perf,
+        "cargo_history": cargo_history,
+    }
+
+
+@app.get("/api/shipping/reports/export")
+def export_shipping_reports(
+    period: str = Query(default="weekly", pattern="^(daily|weekly|monthly)$"),
+    format: str = Query(default="csv", pattern="^(csv|json)$"),
+):
+    report = get_shipping_reports.__wrapped__(period) if hasattr(get_shipping_reports, "__wrapped__") else get_shipping_reports(period)
+    # re-call to get the dict
+    from datetime import datetime, timezone
+    mult = {"daily": 0.04, "weekly": 0.25, "monthly": 1.0}.get(period, 0.25)
+    # Delegate to helper
+    data = get_shipping_reports(period=period)
+    if format == "json":
+        return Response(
+            content=json.dumps(data, indent=2),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="shipping-{period}-report.json"'},
+        )
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["Shipping Company Report", period, data["generated_at"]])
+    writer.writerow([])
+    writer.writerow(["Shipment","Cargo","Qty (MT)","From","To","Cost (INR)","Status","Vessel"])
+    for c in data["cargo_history"]:
+        writer.writerow([c["shipment"],c["cargo"],c["qty_mt"],c["from"],c["to"],c["cost_inr"],c["status"],c["vessel"]])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="shipping-{period}-report.csv"'},
+    )
+
+
+# ---------- Cargo Owner Reports & Forecast ----------
+@app.get("/api/cargo/reports")
+def get_cargo_reports(
+    period: str = Query(default="weekly", pattern="^(daily|weekly|monthly)$"),
+):
+    """Shipment cost and movement reports for the Cargo Owner role."""
+    from datetime import datetime, timezone
+
+    mult = {"daily": 0.04, "weekly": 0.25, "monthly": 1.0}.get(period, 0.25)
+    labels = {
+        "daily":   ["00:00","04:00","08:00","12:00","16:00","20:00"],
+        "weekly":  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+        "monthly": ["Wk 1","Wk 2","Wk 3","Wk 4"],
+    }.get(period, ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
+
+    base_mt   = 1830.0 * mult
+    base_cost = 756000 * mult
+
+    series = []
+    for idx, lbl in enumerate(labels):
+        f = 0.85 + (idx % 4) * 0.1
+        series.append({
+            "label":    lbl,
+            "mt":       round((base_mt   / len(labels)) * f, 1),
+            "cost_inr": round((base_cost / len(labels)) * f),
+        })
+
+    cargo_history = [
+        {"shipment":"SHP-5041","cargo":"Basmati Rice","qty":"500 MT","from":"Mangalore","to":"Kochi",   "cost":185000,"status":"In Transit", "date":"Dec 16"},
+        {"shipment":"SHP-5038","cargo":"Spices",       "qty":"150 MT","from":"Mormugao", "to":"Mumbai",  "cost":92000, "status":"Delayed",    "date":"Dec 16"},
+        {"shipment":"SHP-5035","cargo":"Fertilizer",   "qty":"280 MT","from":"Chennai",  "to":"Mangalore","cost":128000,"status":"Delivered","date":"Dec 14"},
+        {"shipment":"SHP-5033","cargo":"Cardamom",     "qty":"30 MT", "from":"Kochi",    "to":"Mumbai",  "cost":68000, "status":"Delivered",  "date":"Dec 12"},
+    ]
+
+    return {
+        "period": period,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary": {
+            "shipments":       round(7 * mult),
+            "delivered":       round(5 * mult),
+            "delayed":         round(1 * mult),
+            "cargo_moved_mt":  round(base_mt, 1),
+            "total_cost_inr":  round(base_cost),
+            "avg_cost_per_mt": 413,
+        },
+        "series":        series,
+        "cargo_history": cargo_history,
+    }
+
+
+@app.get("/api/cargo/reports/export")
+def export_cargo_reports(
+    period: str = Query(default="weekly", pattern="^(daily|weekly|monthly)$"),
+    format: str = Query(default="csv", pattern="^(csv|json)$"),
+):
+    data = get_cargo_reports(period=period)
+    if format == "json":
+        return Response(
+            content=json.dumps(data, indent=2),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="cargo-{period}-report.json"'},
+        )
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["Cargo Owner Report", period, data["generated_at"]])
+    writer.writerow([])
+    writer.writerow(["Shipment","Cargo","Quantity","From","To","Cost (INR)","Status","Date"])
+    for c in data["cargo_history"]:
+        writer.writerow([c["shipment"],c["cargo"],c["qty"],c["from"],c["to"],c["cost"],c["status"],c["date"]])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="cargo-{period}-report.csv"'},
+    )
+
+
+@app.get("/api/cargo/forecast")
+def get_cargo_forecast():
+    """Demand forecast data for the Cargo Owner role."""
+    return {
+        "categories": [
+            {"key":"rice",    "name":"Basmati Rice",          "unit":"MT","trend":"up",  "weekly_demand":560,"monthly_demand":2400,
+             "history":[420,450,480,500,520,540,560],"forecast":[580,610,640,670],"growth_pct":8.5},
+            {"key":"spices",  "name":"Spices (Cardamom/Pepper)","unit":"MT","trend":"down","weekly_demand":18, "monthly_demand":75,
+             "history":[35,32,30,28,25,22,20],"forecast":[18,16,15,14],"growth_pct":-11.0},
+            {"key":"oil",     "name":"Coconut Oil",            "unit":"MT","trend":"up",  "weekly_demand":68, "monthly_demand":290,
+             "history":[40,42,48,52,58,62,65],"forecast":[70,74,78,82],"growth_pct":6.2},
+            {"key":"steel",   "name":"Steel Rods",             "unit":"MT","trend":"down","weekly_demand":124,"monthly_demand":520,
+             "history":[150,155,148,142,138,130,128],"forecast":[125,122,120,118],"growth_pct":-3.8},
+        ],
+        "history_labels": ["W1","W2","W3","W4","W5","W6","W7"],
+        "forecast_labels": ["F1","F2","F3","F4"],
+    }
+
+
+@app.get("/api/cargo/inventory")
+def get_cargo_inventory():
+    """Port storage inventory visible to the Cargo Owner."""
+    from datetime import datetime, timezone
+    return {
+        "items": [
+            {"id":"INV-001","cargo":"Basmati Rice","category":"Agricultural","port":"Mangalore Port",
+             "warehouse":"WH-A1","qty_stored":500,"qty_max":600,"unit":"MT",
+             "arrival_date":"2024-12-16","eta_departure":"2024-12-16","days_stored":1,"status":"Dispatched"},
+            {"id":"INV-002","cargo":"Cardamom","category":"Spice","port":"Kochi Port",
+             "warehouse":"WH-B2","qty_stored":25,"qty_max":50,"unit":"MT",
+             "arrival_date":"2024-12-10","eta_departure":"2024-12-20","days_stored":8,"status":"Stored"},
+            {"id":"INV-003","cargo":"Pepper (Black)","category":"Spice","port":"Kochi Port",
+             "warehouse":"WH-B2","qty_stored":15,"qty_max":30,"unit":"MT",
+             "arrival_date":"2024-12-08","eta_departure":"2024-12-22","days_stored":10,"status":"Storage Alert"},
+            {"id":"INV-004","cargo":"Steel Rods","category":"Metals","port":"Mumbai (JNPT)",
+             "warehouse":"WH-C1","qty_stored":120,"qty_max":200,"unit":"MT",
+             "arrival_date":"2024-12-14","eta_departure":"2024-12-21","days_stored":4,"status":"Stored"},
+            {"id":"INV-005","cargo":"Coconut Oil","category":"Food","port":"Kochi Port",
+             "warehouse":"WH-D1","qty_stored":60,"qty_max":100,"unit":"MT",
+             "arrival_date":"2024-12-11","eta_departure":"2024-12-23","days_stored":7,"status":"Stored"},
+        ],
+        "movements": [
+            {"date":"Dec 16","cargo":"Basmati Rice","qty_mt":500,"type":"Dispatch","port":"Mangalore Port","warehouse":"WH-A1"},
+            {"date":"Dec 14","cargo":"Steel Rods",   "qty_mt":120,"type":"Arrival", "port":"Mumbai (JNPT)","warehouse":"WH-C1"},
+            {"date":"Dec 11","cargo":"Coconut Oil",  "qty_mt":60, "type":"Arrival", "port":"Kochi Port",   "warehouse":"WH-D1"},
+            {"date":"Dec 10","cargo":"Cardamom",     "qty_mt":25, "type":"Arrival", "port":"Kochi Port",   "warehouse":"WH-B2"},
+            {"date":"Dec 08","cargo":"Pepper",       "qty_mt":15, "type":"Arrival", "port":"Kochi Port",   "warehouse":"WH-B2"},
+        ],
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/api/cargo/shipments/{shipment_id}/events")
+def get_shipment_events(shipment_id: str):
+    """Event history for a specific shipment — used by cargo owner tracking screen."""
+    events_map = {
+        "SHP-5041": [
+            {"time":"Dec 16, 08:00","event":"Vessel MV Bharat departed Mangalore Port","type":"info"},
+            {"time":"Dec 16, 14:30","event":"Cargo loading completed — 500 MT Rice confirmed at Berth B2","type":"success"},
+            {"time":"Dec 17, 10:00","event":"High swell advisory issued for Mangalore–Kochi corridor","type":"warning"},
+            {"time":"Dec 17, 16:00","event":"Vessel speed reduced to 10 kn due to weather conditions","type":"warning"},
+            {"time":"Dec 18, 06:00","event":"Vessel approaching Kochi Port, ETA confirmed 14:30","type":"info"},
+        ],
+        "SHP-5038": [
+            {"time":"Dec 16, 06:00","event":"Vessel MV Sahyadri departed Mormugao Port","type":"info"},
+            {"time":"Dec 16, 18:00","event":"Route deviation detected — 4.2 NM off planned track","type":"warning"},
+            {"time":"Dec 17, 09:00","event":"ETA revised to Dec 18, 17:00 (+3 hours delay)","type":"warning"},
+            {"time":"Dec 17, 14:00","event":"Vessel back on track, speed 11 kn","type":"info"},
+        ],
+    }
+    events = events_map.get(shipment_id, [
+        {"time":"—","event":"No event history available for this shipment","type":"info"},
+    ])
+    return {"shipment_id": shipment_id, "events": events}
+
+
+@app.get("/api/shipping/weather")
+def get_shipping_weather():
+    """Live weather for the Shipping Company role — uses Mangalore coordinates as default."""
+    from .services import fetch_live_weather
+    wx = fetch_live_weather(12.9279, 74.8056, "shipping_default")
+    return wx
+
+
+# ---------- Ship Routing (weather-aware) ----------
+_ROUTING_UNAVAILABLE = HTTPException(
+    status_code=503,
+    detail=(
+        "Ship routing module is unavailable. "
+        "Ensure networkx and requests are installed: pip install networkx requests"
+    ),
+)
+
+
+@app.get("/api/routing/ports")
+def routing_list_ports():
+    """
+    List all ports and waypoints in the routing graph.
+    Returns {node_id: display_name} for every port node.
+    """
+    if _ROUTING_GRAPH is None:
+        raise _ROUTING_UNAVAILABLE
+    return _sr_list_ports(_ROUTING_GRAPH)
+
+
+@app.get("/api/routing/vessel-types")
+def routing_vessel_types():
+    """
+    Return the available vessel type presets and their key parameters.
+    """
+    if _VESSEL_PRESETS is None:
+        raise _ROUTING_UNAVAILABLE
+    result = {}
+    for name, vp in _VESSEL_PRESETS.items():
+        result[name] = {
+            "vessel_type":       vp.vessel_type,
+            "service_speed_kn":  vp.service_speed_kn,
+            "draft_m":           vp.draft_m,
+            "max_wave_height_m": vp.max_wave_height_m,
+            "max_wind_speed_kn": vp.max_wind_speed_kn,
+            "notes":             vp.notes,
+        }
+    return result
+
+
+class _VesselSpecs(BaseModel):
+    draft_m:           Optional[float] = None
+    max_wave_height_m: Optional[float] = None
+    max_wind_speed_kn: Optional[float] = None
+
+
+class _RouteRequest(BaseModel):
+    source_port:      str
+    destination_port: str
+    vessel_type:      str                   = "container_ship"
+    vessel_speed:     Optional[float]       = None   # knots; overrides preset
+    vessel_specs:     Optional[_VesselSpecs] = None
+    departure_time:   Optional[str]         = None   # ISO-8601, UTC recommended
+
+
+@app.post("/api/routing/plan")
+def routing_plan(req: _RouteRequest):
+    """
+    Weather-aware ship route planning.
+
+    Uses real Open-Meteo marine + wind forecasts for every waypoint along
+    the route.  Returns both the weather-aware recommended route and the
+    shortest-distance alternative for comparison.
+
+    Request body fields:
+      source_port      – port node id (e.g. "INNML") or name fragment (e.g. "mangalore")
+      destination_port – same
+      vessel_type      – one of: container_ship, bulk_carrier, tanker,
+                         general_cargo, small_coastal_vessel  (default: container_ship)
+      vessel_speed     – service speed in knots (optional, overrides preset)
+      vessel_specs     – optional overrides: draft_m, max_wave_height_m, max_wind_speed_kn
+      departure_time   – ISO-8601 string (optional, defaults to now UTC)
+
+    This endpoint is a plain `def` (not async) so the blocking Open-Meteo
+    HTTP calls run in a thread pool and do not block the event loop.
+    """
+    if _ROUTING_GRAPH is None:
+        raise _ROUTING_UNAVAILABLE
+
+    request_dict = req.model_dump(exclude_none=True)
+    # vessel_specs is a Pydantic model — convert to plain dict for routing.py
+    if "vessel_specs" in request_dict and hasattr(request_dict["vessel_specs"], "__dict__"):
+        request_dict["vessel_specs"] = {
+            k: v for k, v in vars(request_dict["vessel_specs"]).items() if v is not None
+        }
+
+    result = _sr_to_json_safe(
+        _sr_plan_route(_ROUTING_GRAPH, request_dict, _ROUTING_PROVIDER, _ROUTING_CONFIG)
+    )
+
+    if result.get("status") == "error":
+        raise HTTPException(status_code=422, detail=result.get("error", "routing error"))
+
+    return result

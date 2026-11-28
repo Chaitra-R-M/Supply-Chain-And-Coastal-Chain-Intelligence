@@ -85,4 +85,21 @@ export const api = {
   getReports: (portId, period = 'weekly') => request(`/ports/${portId}/reports?period=${period}`),
   getExportUrl: (portId, period = 'weekly', format = 'csv') =>
     `${API_BASE}/ports/${portId}/reports/export?period=${period}&format=${format}`,
+
+  planRoute: (payload) =>
+    request('/routing/plan', { method: 'POST', body: JSON.stringify(payload) }),
+
+  // Shipping Company role endpoints
+  getShippingReports: (period = 'weekly') => request(`/shipping/reports?period=${period}`),
+  getShippingReportsExportUrl: (period = 'weekly', format = 'csv') =>
+    `${API_BASE}/shipping/reports/export?period=${period}&format=${format}`,
+  getShippingWeather: () => request('/shipping/weather'),
+
+  // Cargo Owner role endpoints
+  getCargoReports: (period = 'weekly') => request(`/cargo/reports?period=${period}`),
+  getCargoReportsExportUrl: (period = 'weekly', format = 'csv') =>
+    `${API_BASE}/cargo/reports/export?period=${period}&format=${format}`,
+  getCargoForecast: () => request('/cargo/forecast'),
+  getCargoInventory: () => request('/cargo/inventory'),
+  getShipmentEvents: (shipmentId) => request(`/cargo/shipments/${shipmentId}/events`),
 };

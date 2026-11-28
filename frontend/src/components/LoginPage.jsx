@@ -187,10 +187,6 @@ export default function LoginPage({ onLogin }) {
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
 
-            {/* Forgot password hint */}
-            <p className="text-center text-xs" style={{ color: '#888' }}>
-              Forgot password?
-            </p>
           </form>
 
           {/* Demo accounts */}
