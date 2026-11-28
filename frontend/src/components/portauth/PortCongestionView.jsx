@@ -157,9 +157,6 @@ export default function PortCongestionView({ portId }) {
               <h2 className="text-sm font-bold text-ink-black-900 dark:text-white">
                 ML Congestion Forecast — Next 24 Hours
               </h2>
-              <p className="text-[11px] text-dusty-denim-500 dark:text-blue-slate-400">
-                HistGradientBoosting model · trained on INNML &amp; INCOK · predicts waiting-vessel count &amp; congestion level
-              </p>
             </div>
           </div>
           <button
